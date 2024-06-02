@@ -112,6 +112,7 @@ namespace Rapport_sport
                         Margin = new Thickness(10, 0, 0, 0)
                     };
 
+                    // Add basic session information
                     sessionTextBlock.Inlines.Add(new Run("Set: " + session.Set + ", Poids: "));
                     sessionTextBlock.Inlines.Add(new Run(session.Weight.HasValue ? session.Weight.Value.ToString() : "N/A")
                     {
@@ -123,16 +124,25 @@ namespace Rapport_sport
                         FontWeight = FontWeights.Bold
                     });
 
+                    // Calculate and display 1RM
+                    if (session.Weight.HasValue && session.Reps.HasValue)
+                    {
+                        double oneRm = session.Weight.Value * (1 + 0.025 * session.Reps.Value);
+                        int roundedOneRm = (int)Math.Round(oneRm);
+                        var oneRmRun = new Run($" 1RM: {roundedOneRm}" +"Kg")
+                        {
+                            Foreground = new SolidColorBrush(Colors.Red),
+                            FontWeight = FontWeights.Bold
+                        };
+                        sessionTextBlock.Inlines.Add(oneRmRun);
+                    }
+
                     displayList.Add(sessionTextBlock);
                 }
             }
 
             SessionList.ItemsSource = displayList;
         }
-
-
-
-
 
 
         private void TrainingCalendar_DisplayDateChanged(object sender, CalendarDateChangedEventArgs e)
@@ -183,12 +193,12 @@ namespace Rapport_sport
 
         private static T FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
         {
-            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            for (int i = 0; VisualTreeHelper.GetChildrenCount(parent) > i; i++)
             {
                 var child = VisualTreeHelper.GetChild(parent, i);
-                if (child is T)
+                if (child is T tChild)
                 {
-                    return (T)child;
+                    return tChild;
                 }
                 var childOfChild = FindVisualChild<T>(child);
                 if (childOfChild != null)
@@ -198,6 +208,21 @@ namespace Rapport_sport
             }
             return null;
         }
+
+        private List<TrainingSession> GetBestPerformances()
+        {
+            return sessions
+                .GroupBy(s => s.Exercise)
+                .Select(g => g.OrderByDescending(s => s.Weight).First())
+                .ToList();
+        }
+
+        private void ShowBestPerformances(object sender, RoutedEventArgs e)
+        {
+            var bestPerformances = GetBestPerformances();
+            var bestPerformancesWindow = new BestPerformancesWindow(bestPerformances);
+            bestPerformancesWindow.Show();
+        }
     }
 
     public static class VisualTreeHelpers
@@ -206,12 +231,12 @@ namespace Rapport_sport
         {
             if (parent == null) yield break;
 
-            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            for (int i = 0; VisualTreeHelper.GetChildrenCount(parent) > i; i++)
             {
                 var child = VisualTreeHelper.GetChild(parent, i);
-                if (child is T t)
+                if (child is T tChild)
                 {
-                    yield return t;
+                    yield return tChild;
                 }
 
                 foreach (var childOfChild in FindChildren<T>(child))
@@ -234,6 +259,19 @@ namespace Rapport_sport
         public string Duration { get; set; }
         public string MeasurementUnit { get; set; }
         public string Notes { get; set; }
+
+        public int OneRM
+        {
+            get
+            {
+                if (Weight.HasValue && Reps.HasValue)
+                {
+                    double oneRm = Weight.Value * (1 + 0.025 * Reps.Value);
+                    return (int)Math.Round(oneRm);
+                }
+                return 0;
+            }
+        }
 
         public override string ToString()
         {
@@ -261,6 +299,5 @@ namespace Rapport_sport
 
             return $"Set: {Set}, {string.Join(", ", details)}";
         }
-
     }
 }
