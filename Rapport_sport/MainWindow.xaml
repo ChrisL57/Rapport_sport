@@ -1,0 +1,12 @@
+﻿<Window x:Class="Rapport_sport.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Rapport Sport" Height="600" Width="800">
+    <Grid>
+        <Calendar Name="TrainingCalendar" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,27,0,0"
+                  SelectedDatesChanged="TrainingCalendar_SelectedDatesChanged"
+                  DisplayDateChanged="TrainingCalendar_DisplayDateChanged"
+                  Loaded="TrainingCalendar_Loaded"/>
+        <ListBox x:Name="SessionList" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,200,0,0" Width="760"/>
+    </Grid>
+</Window>
