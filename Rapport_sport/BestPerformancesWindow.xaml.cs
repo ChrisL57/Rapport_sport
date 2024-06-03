@@ -10,5 +10,10 @@ namespace Rapport_sport
             InitializeComponent();
             BestPerformancesListView.ItemsSource = bestPerformances;
         }
+
+        private void BestPerformancesListView_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+
+        }
     }
 }

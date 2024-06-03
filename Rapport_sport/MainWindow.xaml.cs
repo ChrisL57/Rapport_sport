@@ -52,12 +52,10 @@ namespace Rapport_sport
                     }
                     catch (FormatException ex)
                     {
-                        // Log the error or handle it accordingly
                         Console.WriteLine($"Error parsing line: {line}. Exception: {ex.Message}");
                     }
                     catch (Exception ex)
                     {
-                        // Handle other potential exceptions
                         Console.WriteLine($"Unexpected error parsing line: {line}. Exception: {ex.Message}");
                     }
                 }
@@ -81,39 +79,46 @@ namespace Rapport_sport
                 .ToList();
 
             var displayList = new List<UIElement>();
-            if (sessionsForDate.Any())
-            {
-                var firstSession = sessionsForDate.First().First();
-                var headerTextBlock = new TextBlock
-                {
-                    Text = $"{firstSession.Date:yyyy-MM-dd HH:mm} - {firstSession.WorkoutName}",
-                    FontWeight = FontWeights.Bold,
-                    Margin = new Thickness(0, 0, 0, 10)
-                };
-                displayList.Add(headerTextBlock);
-            }
 
             foreach (var group in sessionsForDate)
             {
-                var exerciseTextBlock = new TextBlock
+                var previousSession = sessions
+                    .Where(ps => ps.Exercise.Trim() == group.Key && ps.Date < date)
+                    .OrderByDescending(ps => ps.Date)
+                    .FirstOrDefault();
+
+                var headerTextBlock = new TextBlock
                 {
-                    Text = $"{group.Key} :",
+                    Text = $"{group.Key}",
                     FontWeight = FontWeights.Bold,
                     Background = new SolidColorBrush(Colors.LightGray),
                     Padding = new Thickness(5),
                     Margin = new Thickness(0, 5, 0, 5)
                 };
-                displayList.Add(exerciseTextBlock);
+
+                if (previousSession != null)
+                {
+                    headerTextBlock.Text += $" (Précédent : {previousSession.Date.ToString("dd/MM/yyyy")})";
+                }
+
+                displayList.Add(headerTextBlock);
+
+                var grid = new Grid();
+                grid.ColumnDefinitions.Add(new ColumnDefinition());
+                grid.ColumnDefinitions.Add(new ColumnDefinition());
+
+                int rowIndex = 0;
 
                 foreach (var session in group)
                 {
+                    grid.RowDefinitions.Add(new RowDefinition());
+
                     var sessionTextBlock = new TextBlock
                     {
                         Margin = new Thickness(10, 0, 0, 0)
                     };
 
-                    // Add basic session information
-                    sessionTextBlock.Inlines.Add(new Run("Set: " + session.Set + ", Poids: "));
+                    sessionTextBlock.Inlines.Add(new Run($"Set: {session.Set}, Poids: "));
                     sessionTextBlock.Inlines.Add(new Run(session.Weight.HasValue ? session.Weight.Value.ToString() : "N/A")
                     {
                         FontWeight = FontWeights.Bold
@@ -124,12 +129,11 @@ namespace Rapport_sport
                         FontWeight = FontWeights.Bold
                     });
 
-                    // Calculate and display 1RM
                     if (session.Weight.HasValue && session.Reps.HasValue)
                     {
                         double oneRm = session.Weight.Value * (1 + 0.025 * session.Reps.Value);
                         int roundedOneRm = (int)Math.Round(oneRm);
-                        var oneRmRun = new Run($" 1RM: {roundedOneRm}" +"Kg")
+                        var oneRmRun = new Run($" 1RM: {roundedOneRm}")
                         {
                             Foreground = new SolidColorBrush(Colors.Red),
                             FontWeight = FontWeights.Bold
@@ -137,12 +141,54 @@ namespace Rapport_sport
                         sessionTextBlock.Inlines.Add(oneRmRun);
                     }
 
-                    displayList.Add(sessionTextBlock);
+                    Grid.SetColumn(sessionTextBlock, 0);
+                    Grid.SetRow(sessionTextBlock, rowIndex);
+                    grid.Children.Add(sessionTextBlock);
+
+                    if (previousSession != null)
+                    {
+                        var previousSessionTextBlock = new TextBlock
+                        {
+                            Margin = new Thickness(10, 0, 0, 0),
+                            Foreground = new SolidColorBrush(Colors.Gray)
+                        };
+
+                        previousSessionTextBlock.Inlines.Add(new Run($"Set: {previousSession.Set}, Poids: "));
+                        previousSessionTextBlock.Inlines.Add(new Run(previousSession.Weight.HasValue ? previousSession.Weight.Value.ToString() : "N/A")
+                        {
+                            FontWeight = FontWeights.Bold
+                        });
+                        previousSessionTextBlock.Inlines.Add(new Run(" kg, Reps: "));
+                        previousSessionTextBlock.Inlines.Add(new Run(previousSession.Reps.HasValue ? previousSession.Reps.Value.ToString() : "N/A")
+                        {
+                            FontWeight = FontWeights.Bold
+                        });
+
+                        if (previousSession.Weight.HasValue && previousSession.Reps.HasValue)
+                        {
+                            double previousOneRm = previousSession.Weight.Value * (1 + 0.025 * previousSession.Reps.Value);
+                            int previousRoundedOneRm = (int)Math.Round(previousOneRm);
+                            previousSessionTextBlock.Inlines.Add(new Run($" 1RM: {previousRoundedOneRm}")
+                            {
+                                Foreground = new SolidColorBrush(Colors.Red),
+                                FontWeight = FontWeights.Bold
+                            });
+                        }
+
+                        Grid.SetColumn(previousSessionTextBlock, 1);
+                        Grid.SetRow(previousSessionTextBlock, rowIndex);
+                        grid.Children.Add(previousSessionTextBlock);
+                    }
+
+                    rowIndex++;
                 }
+
+                displayList.Add(grid);
             }
 
             SessionList.ItemsSource = displayList;
         }
+
 
 
         private void TrainingCalendar_DisplayDateChanged(object sender, CalendarDateChangedEventArgs e)
